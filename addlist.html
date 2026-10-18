@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>My Todo List</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2ff;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
+        }
+
+        h1 {
+            text-align: center;
+            color: #3730a3;
+            margin: 0 0 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #777;
+            margin: 0 0 25px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        #taskInput {
+            flex: 1;
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        #taskInput:focus {
+            border-color: #4f46e5;
+        }
+
+        #addBtn {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            background: #4f46e5;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        #addBtn:hover {
+            background: #3730a3;
+        }
+
+        .task-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            color: #374151;
+            font-size: 17px;
+            margin: 0;
+        }
+
+        #taskCount {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        #taskList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #taskList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+        }
+
+        .task-text {
+            flex: 1;
+            min-width: 0;
+            color: #374151;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .editBtn,
+        .deleteBtn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .editBtn {
+            background: #10b981;
+        }
+
+        .editBtn:hover {
+            background: #059669;
+        }
+
+        .deleteBtn {
+            background: #ef4444;
+        }
+
+        .deleteBtn:hover {
+            background: #dc2626;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #9ca3af;
+            padding: 15px 0;
+            font-size: 14px;
+        }
+
+        @media (max-width: 400px) {
+            .container {
+                padding: 20px;
+            }
+
+            .input-group {
+                gap: 8px;
+            }
+
+            #addBtn {
+                padding: 12px;
+            }
+
+            #taskList li {
+                gap: 8px;
+                padding: 10px;
+            }
+
+            .task-actions {
+                gap: 5px;
+            }
+
+            .editBtn,
+            .deleteBtn {
+                padding: 7px 9px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>My Todo List</h1>
+
+        <p class="subtitle">
+            Organize your day, one task at a time.
+        </p>
+
+        <!-- Task input -->
+
+        <div class="input-group">
+
+            <input
+                type="text"
+                id="taskInput"
+                placeholder="Enter your task..."
+                autocomplete="off"
+            >
+
+            <button id="addBtn">+ Add</button>
+
+        </div>
+
+        <!-- Task heading -->
+
+        <div class="task-heading">
+
+            <h3>My Tasks</h3>
+
+            <span id="taskCount">0 Tasks</span>
+
+        </div>
+
+        <!-- Task list -->
+
+        <ul id="taskList"></ul>
+
+        <!-- Empty message -->
+
+        <p id="emptyMessage" class="empty-message">
+            No tasks yet. Add your first task!
+        </p>
+
+    </div>
+
+    <script>
+        // 1. Select HTML elements
+
+        const taskInput = document.querySelector("#taskInput");
+        const addBtn = document.querySelector("#addBtn");
+        const taskList = document.querySelector("#taskList");
+        const emptyMessage = document.querySelector("#emptyMessage");
+        const taskCount = document.querySelector("#taskCount");
+
+
+        // 2. Load saved tasks from LocalStorage
+
+        let tasks = [];
+
+        try {
+            const savedTasks = JSON.parse(
+                localStorage.getItem("myTasks")
+            );
+
+            tasks = Array.isArray(savedTasks) ? savedTasks : [];
+
+        } catch (error) {
+            tasks = [];
+        }
+
+        let editingId = null;
+
+
+        // 3. Save tasks to LocalStorage
+
+        function saveTasks() {
+
+            localStorage.setItem(
+                "myTasks",
+                JSON.stringify(tasks)
+            );
+
+        }
+
+
+        // 4. Update empty message and task count
+
+        function updateEmptyMessage() {
+
+            if (tasks.length === 0) {
+
+                emptyMessage.style.display = "block";
+
+            } else {
+
+                emptyMessage.style.display = "none";
+
+            }
+
+            taskCount.textContent =
+                `${tasks.length} ${tasks.length === 1 ? "Task" : "Tasks"}`;
+
+        }
+
+
+        // 5. Display all tasks
+
+        function displayTasks() {
+
+            taskList.innerHTML = "";
+
+            tasks.forEach(function (task) {
+
+                // Create list item
+
+                const li = document.createElement("li");
+
+
+                // Create task text
+
+                const taskText = document.createElement("span");
+
+                taskText.className = "task-text";
+
+                taskText.textContent = task.text;
+
+
+                // Create buttons container
+
+                const actions = document.createElement("div");
+
+                actions.className = "task-actions";
+
+
+                // Create Edit button
+
+                const editBtn = document.createElement("button");
+
+                editBtn.className = "editBtn";
+
+                editBtn.textContent = "Edit";
+
+
+                // Edit button functionality
+
+                editBtn.addEventListener("click", function () {
+
+                    taskInput.value = task.text;
+
+                    editingId = task.id;
+
+                    addBtn.textContent = "Update";
+
+                    taskInput.focus();
+
+                });
+
+
+                // Create Delete button
+
+                const deleteBtn = document.createElement("button");
+
+                deleteBtn.className = "deleteBtn";
+
+                deleteBtn.textContent = "Delete";
+
+
+                // Delete button functionality
+
+                deleteBtn.addEventListener("click", function () {
+
+                    const confirmed = confirm(
+                        "Are you sure you want to delete this task?"
+                    );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    tasks = tasks.filter(function (item) {
+
+                        return item.id !== task.id;
+
+                    });
+
+
+                    // Reset form if deleting the task being edited
+
+                    if (editingId === task.id) {
+
+                        editingId = null;
+
+                        taskInput.value = "";
+
+                        addBtn.textContent = "+ Add";
+
+                    }
+
+                    saveTasks();
+
+                    displayTasks();
+
+                });
+
+
+                // Add buttons to container
+
+                actions.appendChild(editBtn);
+
+                actions.appendChild(deleteBtn);
+
+
+                // Add text and buttons to list item
+
+                li.appendChild(taskText);
+
+                li.appendChild(actions);
+
+
+                // Display list item
+
+                taskList.appendChild(li);
+
+            });
+
+            updateEmptyMessage();
+
+        }
+
+
+        // 6. Add new task or update existing task
+
+        addBtn.addEventListener("click", function () {
+
+            const taskText = taskInput.value.trim();
+
+
+            // Validate input
+
+            if (taskText === "") {
+
+                alert("Please enter a task!");
+
+                taskInput.focus();
+
+                return;
+
+            }
+
+
+            // Update existing task
+
+            if (editingId !== null) {
+
+                tasks = tasks.map(function (task) {
+
+                    if (task.id === editingId) {
+
+                        return {
+                            ...task,
+                            text: taskText
+                        };
+
+                    }
+
+                    return task;
+
+                });
+
+                editingId = null;
+
+                addBtn.textContent = "+ Add";
+
+            } else {
+
+                // Create a new task
+
+                const newTask = {
+
+                    id: Date.now(),
+
+                    text: taskText
+
+                };
+
+                tasks.unshift(newTask);
+
+            }
+
+
+            // Save changes
+
+            saveTasks();
+
+
+            // Display updated tasks
+
+            displayTasks();
+
+
+            // Clear input
+
+            taskInput.value = "";
+
+            taskInput.focus();
+
+        });
+
+
+        // 7. Support Enter key
+
+        taskInput.addEventListener("keydown", function (event) {
+
+            if (event.key === "Enter") {
+
+                addBtn.click();
+
+            }
+
+        });
+
+
+        // 8. Display saved tasks when page loads
+
+        displayTasks();
+
+    </script>
+
+</body>
+
+</html>
